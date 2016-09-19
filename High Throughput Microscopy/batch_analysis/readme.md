@@ -7,7 +7,7 @@ A regular expression is used to define which files are to be analyzed.
 
 ### Instructions
 1. Define an image analysis macro (_e.g._ using **Plugins > Macros > Record...**). This must contain a `run(\"Measure\");` statement where the desired measurement is obtained;  
-2. Open script in ImageJ / Fiji (**File > Open...**);  
+2. Open `batch_analysis.ijm` in ImageJ / Fiji (**File > Open...**);  
 3. Paste the macro inside this function, located at the very end of the script:  
 ```java
 function PerformImageAnalysis (){
@@ -32,7 +32,7 @@ function PerformImageAnalysis (){
 
 
 ### Sample data  
-A sample dataset is included. Analysis should work with the default settings. Make sure **Mean gray value** is nabled in **Analyze > Set Measurements...**  
+A sample dataset is included. Analysis should work with the default settings. To analyze the sample dataset make sure **Mean gray value** is enabled in **Analyze > Set Measurements...**  
 
 ### High Throughput Microscopy data
 High throughput microscopy images may be stored in files whose name describes the experiment, such as:  
