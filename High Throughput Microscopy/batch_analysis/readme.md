@@ -1,7 +1,5 @@
 # Analyze all images in a folder
 ImageJ macro  
-v 1.0  
-September 2016  
 
 ### Summary
 This macro performs performs measurements in all images located in a specified folder (recursively). Analysis results are conveninently presented in a table.  
@@ -13,24 +11,24 @@ A regular expression is used to define which files are to be analyzed.
 3. Paste the macro inside this function, located at the very end of the script:  
 ```java
 function PerformImageAnalysis (){
-//   *********      YOUR IMAGE ANALYSIS MACRO BELOW   *********
-//     *****        YOUR IMAGE ANALYSIS MACRO BELOW     *****
-//       *          YOUR IMAGE ANALYSIS MACRO BELOW       *
+	//   *********      YOUR IMAGE ANALYSIS MACRO BELOW   *********
+	//     *****        YOUR IMAGE ANALYSIS MACRO BELOW     *****
+	//       *          YOUR IMAGE ANALYSIS MACRO BELOW       *
 
 
 
 
     run("Measure");
 
-//   *********      YOUR IMAGE ANALYSIS MACRO ABOVE       *
-//     *****        YOUR IMAGE ANALYSIS MACRO ABOVE     *****
-//       *          YOUR IMAGE ANALYSIS MACRO ABOVE   *********
+	//       *          YOUR IMAGE ANALYSIS MACRO ABOVE       *
+	//     *****        YOUR IMAGE ANALYSIS MACRO ABOVE     *****
+	//   *********      YOUR IMAGE ANALYSIS MACRO ABOVE   *********
 }
 ```
 4. Run the script;  
 5. Interact with the dialog boxes;  
 6. ImageJ will then open every image and perform the analysis;  
-6. Once the analysis finishes, save the results table (**File > Save As...**).  
+7. Once the analysis finishes, save the results table (**File > Save As...**).  
 
 
 ### Sample data  
