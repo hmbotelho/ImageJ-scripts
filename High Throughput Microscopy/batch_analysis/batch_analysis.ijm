@@ -1,62 +1,102 @@
 //
-//   Hugo M Botelho
-//   hmbotelho@fc.ul.pt
+//   Hugo M Botelho, Pau Rubio Costa
+//   hmbotelho@fc.ul.pt, prcosta@fc.ul.pt
 //
 //   Analyze all images in a folder
-//   v 1.0
-//   September 2016
+//   v 2.0
+//   January 2022
 // 
 //
-//   This macro performs performs measurements in all images located in a specified folder (recursively).
-//   A regular expression is used to define which files are to be analyzed.
-//
+//   This macro performs performs measurements in all images located in a specified folder (recursively) and applies a processing code to all files.
+//   A regular expression is used to define which files are to be analyzed. This expression can be the HTMrenamer one or another specified by yourself. 
+//	 You can select the measurements that you are interested in. 
+//	 If chosen, a Log file is created, where you can find the name, the input folder, the output folder
+//	 If chosen, a code file is created, where the commands applied to the images are stored
 //   Analysis results are conveninently presented in a table
 //   High Throughput Microscopy data: measurements can be annotated with plate name, well number, subposition index, time, etc
 
 
+#@ String (visibility=MESSAGE, value="This macro performs performs measurements in all images located in a specified folder (recursively). Analysis results are conveninently presented in a table.") msg
+#@ File (style="directory", label="Select the input folder") in
+#@ File (style="directory", label="Select the output folder") out
+#@ String (choices={"HTMrenamer", "Define..."}, style="radioButtonHorizontal", label="Regular expression", description="Select your regular expression. If you select \"HTMrenamer\", the default expression from the HTMrenamer will be chosen; if you select \"Define...\" you will write your own expression") metadata 
+#@ String (choices={"All", "Select..."}, style="radioButtonHorizontal", label="Measurements to export", description="Choose \"All\" to import all kind of measurements; choose \"Select...\" if you want to manually select the measures to export") measurement
+#@ Boolean (label="Create a log file", description="Create a text file with the name, original and final location of the images/results") checkboxlog
+#@ Boolean (label="Create a code file", description="Create a text file with all the commands that were applied to the images") checkboxcode
+#@ Boolean (label="Save processed images", description="Create a directory where all the processed images are stored") checkboximages
+#@ Boolean (label="Save results table", description="Create a CSV file with the results") checkboxresults
+#@ String (style="text area", label="Image analysis workflow", value="Write your image analysis macro code...", description="Write the Macro statements that you want to perform in your image analysis workflow, always in the ImageJ Macro Language") workflow
 
 
+//Adjust the in and out string: when you are using script parameters, they return the directory without the final slash. This causes errors. Adding it will avoid them.
+in = in + "\\";
+out = out + "\\";
 
-// Get image folder
-SourceFolder = getDirectory("Where are your images?");
-
-
-// Set target measurement. Must be the same name that shows up in the results table.
-// measurement = "Mean";
-
-// Get REGEX defining the files to be analyzed
-// regexpr = "^(?<platePath>.*?)--(?<data1>.*?)--(?<data2>.*?)--W(?<wellNum>.*?)--P(?<posNum>.*?)--T(?<timeNum>.*?)--C00\\.(?<filextension>.*?)$";
-
-
-// Get settings from user using a dialog box
-	Dialog.create("Filename and measurement settings");
-	Dialog.addMessage(" === Which files do you want to analyze?");
-	Dialog.addMessage("A typical filename looks like:     myplate_01--VX809--3uM--W0001--P001--T0000--C00.tif");
-	Dialog.addMessage("If your filenames are in a different format, update this regular expression.");
-	Dialog.addString("Regular expression:", "^(?<platePath>.*?)--(?<data1>.*?)--(?<data2>.*?)--W(?<wellNum>.*?)--P(?<posNum>.*?)--T(?<timeNum>.*?)--(?<channel>.*)\\.tif$", 120);
-	Dialog.addMessage("If you are not sure what this means, do not change the default.");
-	Dialog.addMessage("If present in the regular expression, the following named capture groups will be included in the results table:");
-	Dialog.addMessage("    platePath");
-	Dialog.addMessage("    wellNum");
-	Dialog.addMessage("    posNum");
-	Dialog.addMessage("    data1");
-	Dialog.addMessage("    data2");
-	Dialog.addMessage("    timeNum");
-	Dialog.addMessage("=============================================================================================================================");
-	Dialog.addString("Which measurement are you interested in?", "Mean", 30);
-	Dialog.addMessage("This measurement should be enabled in 'Analyze > Set Measurements...'");
-	Dialog.addMessage("=============================================================================================================================");
-	Dialog.addMessage("The image analysis macro should .");
-	Dialog.addMessage("Be sure to include this statement:          run(\"Measure\");");
+//Define and Select
+if (metadata == "Define..." && measurement == "Select...") {
+	Dialog.create("Settings");
+	Dialog.addMessage("Choose the metadata expression");
+	Dialog.addString("Expression:", "Write here...", 30);
+	Dialog.addMessage("Choose the measurements to export");
+	items = newArray("Area", "Standard deviation", "Min & max gray value", "Center of mass", "Bounding rectangle", "Shape descriptors", "Integrated intensity", "Skewness", "Area fraction", "Mean gray value", "Modal gray value", "Centroid", "Perimeter", "Fit Ellipse", "Feret's diameter", "Median", "Kurtosis", "Stack position");
+	defaults = newArray(18);
+	Dialog.addCheckboxGroup(9, 2, items, defaults);
 	Dialog.show();
+	
+	regexpr = Dialog.getString(); 
+	measurements = newArray();
+	for (i = 0; i < lengthOf(items); i++) {
+		if (Dialog.getCheckbox() == true) {
+			measurements = Array.concat(measurements, items[i]);
+		}
+	}
+}
 
-	regexpr = Dialog.getString();
-	measurement = Dialog.getString();
+//Define and ALl
+if (metadata == "Define..." && measurement == "All") {
 
+	Dialog.create("Settings");
+	Dialog.addMessage("Choose the metadata expression that will be used");
+	Dialog.addString("Expression:", "Write here...", 30);
+	Dialog.show();
+	regexpr = Dialog.getString(); 
+	measurements =  newArray("Area", "Standard deviation", "Min & max gray value", "Center of mass", "Bounding rectangle", "Shape descriptors", "Integrated intensity", "Skewness", "Area fraction", "Mean gray value", "Modal gray value", "Centroid", "Perimeter", "Fit Ellipse", "Feret's diameter", "Median", "Kurtosis", "Stack position");
+}
+
+//HTMrenamer and select
+if (metadata == "HTMrenamer" && measurement == "Select...") {
+	Dialog.create("Settings");
+	Dialog.addMessage("Choose the measurements to export");
+	items = newArray("Area", "Standard deviation", "Min & max gray value", "Center of mass", "Bounding rectangle", "Shape descriptors", "Integrated intensity", "Skewness", "Area fraction", "Mean gray value", "Modal gray value", "Centroid", "Perimeter", "Fit Ellipse", "Feret's diameter", "Median", "Kurtosis", "Stack position");
+	defaults = newArray(18);
+	Dialog.addCheckboxGroup(9, 2, items, defaults);
+	Dialog.show();
+	measurements = newArray();
+	for (i = 0; i < lengthOf(items); i++) {
+		if (Dialog.getCheckbox() == true) {
+			measurements = Array.concat(measurements, items[i]);
+		}
+	}
+	regexpr = "^(?<platePath>.*?)--(?<data1>.*?)--(?<data2>.*?)--W(?<wellNum>.*?)--P(?<posNum>.*?)--T(?<timeNum>.*?)--(?<channel>.*)\\.tif$"; 
+}
+
+//HTMrenamer and All
+if (metadata == "HTMrenamer" && measurement == "All") {
+	regexpr = "^(?<platePath>.*?)--(?<data1>.*?)--(?<data2>.*?)--W(?<wellNum>.*?)--P(?<posNum>.*?)--T(?<timeNum>.*?)--(?<channel>.*)\\.tif$"; 
+	measurements =  newArray("Area", "Standard deviation", "Min & max gray value", "Center of mass", "Bounding rectangle", "Shape descriptors", "Integrated intensity", "Skewness", "Area fraction", "Mean gray value", "Modal gray value", "Centroid", "Perimeter", "Fit Ellipse", "Feret's diameter", "Median", "Kurtosis", "Stack position");
+}
+
+//If save images options is selected, a dialog appears to choose the format for saving them
+if (checkboximages == true) {
+	formats = newArray("Tiff", "PNG", "Gif", "Jpeg");
+	Dialog.create("Saving format");
+	Dialog.addChoice("In which format do you want to save your images?" , formats);
+	Dialog.show();
+	format = Dialog.getChoice();
+}
 
 // Generate an array with all files in all subfolders of 'SourceFolder'
-AllFiles = ListFiles(SourceFolder);
-
+AllFiles = ListFiles(in);
 
 // Exclude all items with incorrect extension
 OKFiles = AllFiles;
@@ -67,79 +107,155 @@ for (i=0; i<lengthOf(OKFiles); i++){
 	}
 }
 
+//If there are no files in the folder, the macro will abort
+if (lengthOf(AllFiles) == 0) {
+	waitForUser("Error", "No files found");
+	exit;
+}
 
-// Initialize results table
+//If there are no files matching the regular expression, the macro will abort
+if (lengthOf(OKFiles) == 0) {
+	waitForUser("Error", "No files matching the regular expression found");
+	exit;
+}
+
+//Closes the results table if open to avoid errors
+if (isOpen("Results table")) {
+	selectWindow("Results table");
+	run("Close");
+}
+
+//Clear the results
 run("Clear Results");
-t="[Results table]"; 
-run("New... ", "name="+t+" type=Table"); 
-print(t,"\\Headings:Plate\tWell\tPosition\tdata1\tdata2\tTime\t" + measurement + "\tFile\tfileLocation"); 
 
+//Initialize the code file if selected
+if (checkboxcode == true) {
+	code = File.open(out+"code.txt");
+	print(code, workflow);
+	File.close(code);
+}
+
+//Creates a directory where the images are saved 
+if (checkboximages == true) {
+	imagespath = out+"Images/";
+	File.makeDirectory(imagespath);
+}
+
+//Initialize the log file if selected
+if (checkboxlog == true) {
+	logfile = File.open(out+"logfile.txt");
+	print(logfile,"Name\tOriginal directory\tFinal directory"); 
+}
+
+
+//Boolean variable: used for opening the results table and populating it in the first cycle of the next for loop
+boolean = 1;
 
 // Open every single file and perform analysis
 for (i=0; i<lengthOf(OKFiles); i++){
 	
 	// Open file
 	open(OKFiles[i]);
-
+	
 	// Get basic file information
 	path = getInfo("image.directory");
 	filename = getInfo("image.filename");
+	filenamewe = File.getNameWithoutExtension(path + filename);
 	fileLocation = path + filename;
 
-	if(matches(regexpr, ".*<platePath>.*")){
-		plate = replace(filename, regexpr, "${platePath}");
-	} else{
-		plate = "NA";
+	//Populate the log file
+	if (checkboxlog == true) {
+
+		print(logfile, filename + "\t" + in + "\t" + out + "\n"); 
+		
 	}
+	//Regular expresion and result table (only will enter in the first cycle)
+	if (boolean == 1) {
 
-	if(matches(regexpr, ".*<wellNum>.*")){
-		well = replace(filename, regexpr, "${wellNum}");
-	} else{
-		well = "NA";
-	}
+		//Boolean to 0
+		boolean = 0;
+		
+		//Headings of the results
+		measureheadings = ResultsHeaders(measurements);
 
-	if(matches(regexpr, ".*<posNum>.*")){
-		position = replace(filename, regexpr, "${posNum}");
-	} else{
-		position = "NA";
-	}
+		//Headings of the regular expression fields
+		expheadings = RegularExpression(regexpr, filename);
+		
+		//Headings array
+		headings = Array.concat(expheadings, measureheadings);
+		headings = Array.concat("File name" ,headings);
+		headings = Array.concat(headings,"File location");
+		
+		//Headings string
+		headstr = String.join(headings, "\t");
 
-	if(matches(regexpr, ".*<data1>.*")){
-		data1 = replace(filename, regexpr, "${data1}");
-	} else{
-		data1 = "NA";
-	}
-
-	if(matches(regexpr, ".*<data2>.*")){
-		data2 = replace(filename, regexpr, "${data2}");
-	} else{
-		data2 = "NA";
-	}
-
-	if(matches(regexpr, ".*<timeNum>.*")){
-		time = replace(filename, regexpr, "${timeNum}");
-	} else{
-		time = "NA";
-	}
-
-
-
-
-	// Perform image analysis
-	PerformImageAnalysis();
-
-
-	// Grab the measurement obtained at the end of analysis
-	quant = getResult(measurement, getValue("results.count")-1);
-
+		// Initialize results table
+		t="[Results table]"; 
+		run("New... ", "name="+t+" type=Table"); 
+		print(t, "\\Headings:"+headstr); //ALERTA:::: need changes
 	
+	}
+
+	//Set measurements
+	Setmeasurements(measurements, filename);
+	
+	// Perform image analysis«
+	PerformImageAnalysis(workflow);
+
+	//Save processed images if selected
+	if (checkboximages == true) {
+		save(imagespath+filenamewe+"_processed."+format);
+	}
+	
+	// Grab the measurements obtained at the end of analysis
+	resultarray = newArray();
+	
+	for (r = 0; r < lengthOf(measureheadings); r++) {
+
+		result = getResult(measureheadings[r], getValue("results.count")-1);
+
+		resultarray  = Array.concat(resultarray,result);
+	}
+
+	//Transform the result array to string for adding it to the table 
+	resultstr = String.join(resultarray, "\t");
+
+	//Grab the regular expression data from file name
+	exparray = newArray();
+	
+	for (e = 0; e < lengthOf(expheadings); e++) {
+
+		field = expheadings[e];
+		
+		value = replace(filename, regexpr, "${"+ field + "}");
+
+		exparray = Array.concat(exparray, value);
+		
+	}
+
+	//Transform the exp array for adding it to the table 
+	expstr = String.join(exparray, "\t");
+
 	// Close file
+	selectWindow(filename);
 	close();
 
 	// Populate results table
-	print(t,plate+"\t"+well+"\t"+position+"\t"+data1+"\t"+data2+"\t"+time+"\t"+quant+"\t"+filename+"\t"+fileLocation); 
+	if (lengthOf(exparray) > 0) {
+	
+		print(t, filename+"\t" + expstr + "\t" + resultstr + "\t"+ fileLocation);
+		
+	} else {
+		
+		print(t, filename+"\t" + resultstr + "\t"+ fileLocation); 
+
+	}
 }
 
+//Close the log file
+if (checkboxlog == true) {
+	File.close(code);
+}
 
 // Close the results window to declutter the screen
 if (isOpen("Results")) { 
@@ -147,27 +263,16 @@ if (isOpen("Results")) {
 	run("Close"); 
 } 
 
+//Save results table
+if (checkboxresults == true) {
+	selectWindow("Results table");
+	saveAs("Text", out + "Results.csv");
+}
 
-
-
-
-
-
-
-
-
-
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-
-
-// This function retruns an array listing all files within the "dir" folder and all subfolders
-// Recursively
 function ListFiles(dir) {
 	FilesArray = newArray();		// This array will only contain the filenames
 	list = getFileList(dir);		// This array will contain all file + folder names
-	list = AppendPrefixArray (list, SourceFolder);
+	list = AppendPrefixArray (list, in); //here, you can replace sourcefolder with dir
 	i = 0;
 	while (i < list.length){
 		showProgress(i/list.length);
@@ -182,7 +287,6 @@ function ListFiles(dir) {
 	}
 	return FilesArray;
 }
-
 
 
 // This function adds a prefix to all elements of an array
@@ -213,35 +317,168 @@ function RemoveArrayItem (array, index){
 }
 
 
+//This function applies the chosen code to the images and runs de measure command
+function PerformImageAnalysis(commands) {
+	eval(commands);
+	run("Measure"); 
+}
 
 
+//This function set the desired parammeters in set measurements
+function Setmeasurements(array, file) { 
+// enablse the measurements selected
+// needs an array which contains the measurements to enable by their name and a filename
+	list = String.join(array);
+	list = list.replace(",", "");
+	//goes through the string and replace 
+	list = list.replace("Area", "area");
+	list = list.replace("Mean gray value", "mean");
+	list = list.replace("Standard deviation", "standard");
+	list = list.replace("Modal gray value", "modal");
+	list = list.replace("Min & max gray value", "min");
+	list = list.replace("Centroid", "centroid");
+	list = list.replace("Center of mass", "center");
+	list = list.replace("Perimeter", "perimeter");
+	list = list.replace("Bounding rectangle", "bounding");
+	list = list.replace("Fit Ellipse", "fit");
+	list = list.replace("Feret's diameter", "feret's");
+	list = list.replace("Integrated intensity", "integrated");
+	list = list.replace("Median", "median");
+	list = list.replace("Skewness", "skewness");
+	list = list.replace("Kurtosis", "kurtosis");
+	list = list.replace("Area fraction", "area_fraction");
+	list = list.replace("Stack position", "stack");
+	run("Set Measurements...", list + "redirect="+file+" decimal=3"); 
+}
 
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////
+
+function ResultsHeaders(array) { 
+// This function creates an array with the headers of the imagej results table from an array with the names of the measurements of the set measurements menu
+	resulthead = newArray();
+	for (j = 0; j < lengthOf(array); j++) {
+		if (array[j] == "Area") {
+			resulthead = Array.concat(resulthead, "Area");
+		}
+		if (array[j] == "Mean gray value") {
+			resulthead = Array.concat(resulthead, "Mean");
+		}
+		if (array[j] == "Standard deviation") {
+			resulthead = Array.concat(resulthead, "StdDev");
+		}
+		if (array[j] == "Standard deviation") {
+			resulthead = Array.concat(resulthead, "Mode");
+		}
+		if (array[j] == "Min & max gray value") {
+			resulthead = Array.concat(resulthead, "Min");
+			resulthead = Array.concat(resulthead, "Max");
+		}
+		if (array[j] == "Centroid") {
+			resulthead = Array.concat(resulthead, "X");
+			resulthead = Array.concat(resulthead, "Y");
+		}
+		if (array[j] == "Center of mass") {
+			resulthead = Array.concat(resulthead, "XM");
+			resulthead = Array.concat(resulthead, "YM");
+		}
+		if (array[j] == "Perimeter") {
+			resulthead = Array.concat(resulthead, "Perim.");
+		}
+		if (array[j] == "Bounding Rectangle") {
+			resulthead = Array.concat(resulthead, "BX");
+			resulthead = Array.concat(resulthead, "BY");
+			resulthead = Array.concat(resulthead, "Width");
+			resulthead = Array.concat(resulthead, "Height");
+		}
+		if (array[j] == "Fit Ellipse") {
+			resulthead = Array.concat(resulthead, "Perim.");
+			resulthead = Array.concat(resulthead, "Major");
+			resulthead = Array.concat(resulthead, "Minor");
+			resulthead = Array.concat(resulthead, "Angle");
+		}
+		if (array[j] == "Shape Descriptors") {
+			resulthead = Array.concat(resulthead, "Circ.");
+			resulthead = Array.concat(resulthead, "AR");
+			resulthead = Array.concat(resulthead, "Round");
+			resulthead = Array.concat(resulthead, "Solidity");
+		}
+		if (array[j] == "Feret's Diameter") {
+			resulthead = Array.concat(resulthead, "Feret");
+			resulthead = Array.concat(resulthead, "FeretAngle");
+			resulthead = Array.concat(resulthead, "MinFeret");
+			resulthead = Array.concat(resulthead, "Feret");
+			resulthead = Array.concat(resulthead, "FeretX");
+			resulthead = Array.concat(resulthead, "FeretY");
+		}
+		if (array[j] == "Integrated Density") {
+			resulthead = Array.concat(resulthead, "IntDen");
+			resulthead = Array.concat(resulthead, "RawIntDen");
+		}
+		if (array[j] == "Median") {
+			resulthead = Array.concat(resulthead, "Median");
+		}
+		if (array[j] == "Skewness") {
+			resulthead = Array.concat(resulthead, "Skew");
+		}
+		if (array[j] == "Kurtosis") {
+			resulthead = Array.concat(resulthead, "Kurt");
+		}
+		if (array[j] == "Area Fraction") {
+			resulthead = Array.concat(resulthead, "%Area");
+		}
+		if (array[j] == "Stack Position") {
+			resulthead = Array.concat(resulthead, "Ch");
+			resulthead = Array.concat(resulthead, "Slice");
+			resulthead = Array.concat(resulthead, "Frame");
+		}	
+	}
+	return resulthead;
+}
 
 
-
-
-// This functions performs analysis
-function PerformImageAnalysis (){
-
-//   *********      YOUR IMAGE ANALYSIS MACRO BELOW   *********
-//     *****        YOUR IMAGE ANALYSIS MACRO BELOW     *****
-//       *          YOUR IMAGE ANALYSIS MACRO BELOW       *
-
-
-
-
-
-
-
-
-
-	run("Measure");
-
-
-//   *********      YOUR IMAGE ANALYSIS MACRO ABOVE       *
-//     *****        YOUR IMAGE ANALYSIS MACRO ABOVE     *****
-//       *          YOUR IMAGE ANALYSIS MACRO ABOVE   *********
+function RegularExpression(myregexpr, file) { 
+//	This function checks if the regular expression matches with a filename
+//	If does, the function will try to find capturing groups; if not, it will abort the macro
+//	Then, if capturing groups exits, store them in an array and returns them (nammed or unnamed); if not, it retuns an empty array 
+	//array where the headings are stored
+	regexphead = newArray();
+	//integer where the position of the captured groups will be captured
+	position = 0;
+	// step 1: find whether the regular expression matches the string
+	if (matches(file, myregexpr)){
+		// Determine whether there are capturing grups
+		if  ((indexOf(myregexpr,"(")) != -1 && (indexOf(myregexpr, ")")) != -1) {	// e.g. find pairs of ()
+			//if( find("(?<...>)")){
+			if ((indexOf(myregexpr,"<")) != -1 && (indexOf(myregexpr, ">")) != -1) {
+				//named capture
+				while (position < lengthOf(myregexpr)-12) {
+					start = indexOf(myregexpr, "<", position) + 1;
+					end = indexOf(myregexpr, ">", position+1); //no -1 porque en substring ya le resta al end
+					name = substring(myregexpr, start, end);
+					regexphead = Array.concat(regexphead,name);
+					position = end;
+				}
+			} else {
+				// Unnamed capture
+				//counter variable
+				n = 0;
+				// Find "field1, field2,...
+				while (position < lengthOf(myregexpr)-8) {
+					n = n +1;
+					start = indexOf(myregexpr, "(", position) + 1;
+					end = start + 4; //because of the sintaxis of (.*?)
+					name = "Field " + n;
+					regexphead = Array.concat(regexphead, name);
+					position = end;
+				}
+			}
+		} else {
+			//there are no capturing groups
+			waitForUser("Warning", "There are no capturing groups");
+		}
+	} else {
+		//The regular expression does not match: the macro is aborted
+		waitForUser("Error", "The regular expression does not match with the file name/s: macro will abort");
+		exit;
+	}
+	return regexphead;
 }
