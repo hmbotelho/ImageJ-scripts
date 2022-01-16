@@ -1,45 +1,101 @@
 # Analyze all images in a folder
+
 ImageJ macro  
 
 ### Summary
-This macro performs performs measurements in all images located in a specified folder (recursively). Analysis results are conveninently presented in a table.  
-A regular expression is used to define which files are to be analyzed.  
+
+This macro performs performs measurements in all images located in a specified folder (recursively). Analysis results are conveninently presented in a table. 
+ 
+A regular expression is used to define which files are to be analyzed. This expression can be the HTMrenamer one or another specified by yourself.
+
+You can select the measurements that you are interested in. 
+
+If chosen, a log file is created, where you can find the name, the input folder, the output folder.
+
+If chosen, a code file is created, where the commands applied to the images are stored.
+
+Analysis results are conveninently presented in a table. If chosen, this results can be saved in a csv file.
+
+Processed images can be also saved in the desired image format (e.g. Tif, PNG, Gif, Jpeg). 
+
+High Throughput Microscopy data: measurements can be annotated with its metadata; eg: plate name, well number, subposition index, time, etc. 
+
 
 ### Instructions
-1. Define an image analysis macro (_e.g._ using **Plugins > Macros > Record...**). This must contain a `run(\"Measure\");` statement where the desired measurement is obtained;  
-2. Open `batch_analysis.ijm` in ImageJ / Fiji (**File > Open...**);  
-3. Paste the macro inside this function, located at the very end of the script:  
-```java
-function PerformImageAnalysis (){
-	//   *********      YOUR IMAGE ANALYSIS MACRO BELOW   *********
-	//     *****        YOUR IMAGE ANALYSIS MACRO BELOW     *****
-	//       *          YOUR IMAGE ANALYSIS MACRO BELOW       *
 
+1. Define an image analysis macro (_e.g._ using **Plugins > Macros > Record...**).  Do not include a run("Measure") command. 
 
+2. Open `batch_analysis.ijm` in ImageJ / Fiji (**File > Open...**).
 
+3. Run the script.
 
-    run("Measure");
+4. Interact with the Macro menu. Define: 
 
-	//       *          YOUR IMAGE ANALYSIS MACRO ABOVE       *
-	//     *****        YOUR IMAGE ANALYSIS MACRO ABOVE     *****
-	//   *********      YOUR IMAGE ANALYSIS MACRO ABOVE   *********
-}
-```
-4. Run the script;  
-5. Interact with the dialog boxes;  
-6. ImageJ will then open every image and perform the analysis;  
-7. Once the analysis finishes, save the results table (**File > Save As...**).  
+-Images to analyze
 
+-Saving directory
 
-### Sample data  
-A sample dataset is included. Analysis should work with the default settings. To analyze the sample dataset make sure **Mean gray value** is enabled in **Analyze > Set Measurements...**  
+-Measurements and regular expression
+
+-The files you need to create 
+
+-The macro code that you wrote previously
+
+5. If you selected saving the processed images, select the desired image format.
+
+6. ImageJ will then open every image and perform the analysis. 
+
+7. Finally, the results table will show up. If selected, the created files and processed images will be stored in the output directory.   
+
+~
 
 ### High Throughput Microscopy data
-High throughput microscopy images may be stored in files whose name describes the experiment, such as:  
-`myplate_01--compound--3uM--W0001--P001--T0000--C00.tif`  
-For each image, the measurement can be annotated with this information:  
-- Plate Name  
+
+Within the HTMrenamer regular expression (HTMrenamer link), high throughput microscopy images may be stored in files whose name describes the experiment, such as:  
+
+`myplate_01--compound--3uM--W0001--P001--T0000--C00.tif` 
+ 
+If selected, for each image, the measurement can be annotated with this information:  
+
+- Plate Name 
+ 
 - Well Number  
+
 - Subposition Index  
+
 - Timepoint number (_for timelapse images_)  
+
 - 2 generic data fields (data1 & data2)  
+
+### Sample data and example workflow.
+
+A sample dataset is included. For example, if we just wanted to apply a median filter to all images in a directory, and then getting some measurements from them, this is how would be:
+
+1. Download the sample data set.
+
+2. Define the image analysis macro. Using the recorder, copy the command which applies the median filter: "run("Median...", "radius=2");"
+
+3. Open "batch_analysis.ijm" and run it
+
+4. Run it
+
+5. Select the sample dataset as "input". Choose the directory where you want to save your files as "saving directory".
+
+6. Select the initial options as follows:
+
+7. Select the 
+
+8. Select PNG as the processed images saving format and click in 
+
+Finished! The results table will show up. 
+
+In the selected output directory, you will find this files:
+
+- A folder named "Images", where you will find the processed images.
+
+- A text file named "Codefile", where the applied command will appear.
+
+- A text file named "Logfile", where you will find a file summary, with it's original and final location.
+
+- A CSV file named "Results", with all the data summarized on the results table
+
