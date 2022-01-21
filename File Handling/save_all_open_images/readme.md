@@ -6,7 +6,7 @@ ImageJ macro
 
 - This macro saves all opened images in a specified folder
 
-- You can choose the saving format between Tif, PNG or Gif. 
+- You can choose the saving format between Tiff, PNG or Gif. 
 
 ### Instructions
 
@@ -17,3 +17,5 @@ ImageJ macro
 3. Run the macro.
 
 4. Interact with the macro menu: define the saving folder and select the desired format.
+
+![image](https://user-images.githubusercontent.com/91415505/150569757-4cade32c-d496-4d48-97fe-fa21bad4828e.png)
