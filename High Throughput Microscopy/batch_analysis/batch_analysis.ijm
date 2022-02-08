@@ -26,11 +26,18 @@
 #@ Boolean (label="Save processed images", description="Create a directory where all the processed images are stored") checkboximages
 #@ Boolean (label="Save results table", description="Create a CSV file with the results") checkboxresults
 #@ String (style="text area", label="Image analysis workflow", value="Write your image analysis macro code...", description="Write the Macro statements that you want to perform in your image analysis workflow, always in the ImageJ Macro Language") workflow
-
+#@ Boolean (label="Batch mode", description="Run the analysis without showing the image window/s (increases the macro speed)") batch
 
 //Adjust the in and out string: when you are using script parameters, they return the directory without the final slash. This causes errors. Adding it will avoid them.
 in = in + "\\";
 out = out + "\\";
+
+//Generalize the in and out file separator style
+in = replace(in, "\\", "/");
+out = replace(out, "\\", "/");
+
+//batch mode
+setBatchMode(false);
 
 //Define and Select
 if (metadata == "Define..." && measurement == "Select...") {
@@ -137,10 +144,17 @@ if (checkboxcode == true) {
 
 //Creates a directory where the images are saved 
 if (checkboximages == true) {
+	setBatchMode("hide");
 	imagespath = out+"Images/";
 	File.makeDirectory(imagespath);
+	processFolder(in, imagespath, regexpr);
+	setBatchMode(false);
 }
 
+//Batch mode 
+if (batch == true) {
+	setBatchMode("hide");
+}
 //Initialize the log file if selected
 if (checkboxlog == true) {
 	logfile = File.open(out+"logfile.txt");
@@ -156,6 +170,9 @@ for (i=0; i<lengthOf(OKFiles); i++){
 	
 	// Open file
 	open(OKFiles[i]);
+
+	//Show progress
+	showProgress(i, lengthOf(OKFiles));
 	
 	// Get basic file information
 	path = getInfo("image.directory");
@@ -204,7 +221,8 @@ for (i=0; i<lengthOf(OKFiles); i++){
 
 	//Save processed images if selected
 	if (checkboximages == true) {
-		save(imagespath+filenamewe+"_processed."+format);
+		filelocwe = replace(fileLocation, ".tif", "");
+		save(imagespath+ replace(filelocwe, in, "")+"_processed."+format);
 	}
 	
 	// Grab the measurements obtained at the end of analysis
@@ -269,6 +287,7 @@ if (checkboxresults == true) {
 	saveAs("Text", out + "Results.csv");
 }
 
+//FUNCTIONS
 function ListFiles(dir) {
 	FilesArray = newArray();		// This array will only contain the filenames
 	list = getFileList(dir);		// This array will contain all file + folder names
@@ -288,7 +307,6 @@ function ListFiles(dir) {
 	return FilesArray;
 }
 
-
 // This function adds a prefix to all elements of an array
 function AppendPrefixArray (array, prefix){
 	for (k=0; k<lengthOf(array); k++){
@@ -297,7 +315,6 @@ function AppendPrefixArray (array, prefix){
 	return array;
 }
 
-
 // This function inserts array2 into the specified position of array1
 // 0 is the first position of the array
 function InsertArray (array1, array2, position){
@@ -305,7 +322,6 @@ function InsertArray (array1, array2, position){
 	end = Array.slice (array1, position, lengthOf(array1));
 	return Array.concat(beginning, array2, end);
 }
-
 
 // Removes one item from an array, as defined by its postion in the array (0, 1, 2, ...)
 // The output array is one unit shorter than the original one
@@ -316,13 +332,11 @@ function RemoveArrayItem (array, index){
 	return output;
 }
 
-
 //This function applies the chosen code to the images and runs de measure command
 function PerformImageAnalysis(commands) {
 	eval(commands);
 	run("Measure"); 
 }
-
 
 //This function set the desired parammeters in set measurements
 function Setmeasurements(array, file) { 
@@ -350,7 +364,6 @@ function Setmeasurements(array, file) {
 	list = list.replace("Stack position", "stack");
 	run("Set Measurements...", list + "redirect="+file+" decimal=3"); 
 }
-
 
 function ResultsHeaders(array) { 
 // This function creates an array with the headers of the imagej results table from an array with the names of the measurements of the set measurements menu
@@ -434,7 +447,6 @@ function ResultsHeaders(array) {
 	return resulthead;
 }
 
-
 function RegularExpression(myregexpr, file) { 
 //	This function checks if the regular expression matches with a filename
 //	If does, the function will try to find capturing groups; if not, it will abort the macro
@@ -481,4 +493,51 @@ function RegularExpression(myregexpr, file) {
 		exit;
 	}
 	return regexphead;
+}
+
+// function to scan folders/subfolders/files to find files with correct suffix
+function processFolder(input, output, regex) {
+	list = getFileList(input);
+	list = Array.sort(list);
+	for (i = 0; i < list.length; i++) {
+		if(File.isDirectory(input + File.separator + list[i]))
+			processFolder(input + File.separator + list[i], output, regex);
+		if(matches(list[i], regex))
+			processFile(input, output, list[i], regex);
+	}
+}
+
+function processFile(input, output, file, regex) {
+
+	// Open image
+	sourcepath = input + "/" + file;
+	open(sourcepath);
+
+	// Make dirs
+	img = getTitle();
+	targetpath = replace(input, in, imagespath) + "/" + img;
+	dir = File.getDirectory(targetpath);
+	makeDirRecursive(dir);
+	close("*");
+}
+
+// Creates a folder, recursively
+// Output: none
+//
+// dir	character, path to the new folder
+function makeDirRecursive(dir){
+	folders = split(dir, "/");
+	
+	if(startsWith(dir, "/")){
+		temp = "/";			// macOS
+	} else{
+		temp = "";			// Windows
+	}
+	
+	for(i=0; i<lengthOf(folders); i++){
+		temp = temp + folders[i] + "/";
+		if(!File.exists(temp)){
+			File.makeDirectory(temp);
+		}
+	}
 }

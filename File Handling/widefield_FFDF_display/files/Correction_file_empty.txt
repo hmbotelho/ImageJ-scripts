@@ -1,0 +1,4 @@
+DF File location	FF File location	LUTmin	LUTmax
+Z:/JoanaS/MaMTH_screen/analysis/FINAL HIT IMAGES/FF_DF/DF_C00.tif	Z:/JoanaS/MaMTH_screen/analysis/FINAL HIT IMAGES/FF_DF/FF_C00.tif	0	5
+Z:/JoanaS/MaMTH_screen/analysis/FINAL HIT IMAGES/FF_DF/DF_C01.tif	Z:/JoanaS/MaMTH_screen/analysis/FINAL HIT IMAGES/FF_DF/FF_C01.tif	0	0.55
+Z:/JoanaS/MaMTH_screen/analysis/FINAL HIT IMAGES/FF_DF/DF_C02.tif	Z:/JoanaS/MaMTH_screen/analysis/FINAL HIT IMAGES/FF_DF/FF_C02.tif	0	0.0435
